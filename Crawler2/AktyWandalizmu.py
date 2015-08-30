@@ -2,6 +2,7 @@
 import requests
 import re
 from bs4 import BeautifulSoup
+from bs4 import NavigableString
 
 def przetworzStrone(url):
     "Funckja przetwarzająca strone na obiekt klasy BeautfulSoup"
@@ -45,6 +46,12 @@ class AktyWandalizmu(object):
                         zmiana.usuwany = False
                     else:
                         zmiana.usuwany = True
+                    komentarz = odnosnik.find('span', class_="comment")     #poszukaj komentarza
+                    try:
+                        print("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore'))
+                        zmiana.komentarz = unicode(komentarz.text).encode('ascii', 'ignore')
+                    except AttributeError:
+                        pass        #nie było opisu przy zmianie (zdarza się to jednak dość rzadko
                     if id in self.wojny and next > 0:       #jeżeli zmiany są obok siebie oraz jest już wcześniej dodane to dopisuje do tego id w słowniku
                         self.wojny[id].append(zmiana)
                         print("Weszlo" + str(span.string) + "z id: " + str(id))
@@ -58,14 +65,25 @@ class AktyWandalizmu(object):
                     else:
                         pass        #coś nie pykło (powinien być tutaj jakiś exception)
                 else:
-                    if abs(liczba) != 0:        #zauważyłem że czasem pomiędzy dwoma zmianami jest jedna z numerem zmian równym 0, nie wiem dlaczego tak jest
+                    if liczba != 0:        #zauważyłem że czasem pomiędzy dwoma zmianami jest jedna z numerem zmian równym 0, nie wiem dlaczego tak jest
                         next = 0
                     #id += 1
         for item in self.wojny:
             print item
+        #return self.wojny
+
+    def odfiltrujPojedyncze(self):
+        "Jeżeli nastąpiło dodanie tesktu lub jego usunięcie ale jest to jedynie uzupełnienie jakiejś informacji a nie ciągła zmiana akapitu to usuń takie wyniki"
+        tylkoWojny = {}     #nowy słownik bez pojedynczych wystąpień
+        for key in self.wojny:
+            if len(self.wojny[key]) > 1:        #jeżeli wystąpiło + - (lub - +), czyli więcej niż pojedynczy niepowiązany wpis
+                tylkoWojny[key] = self.wojny[key]
+                print tylkoWojny[key]
+        self.wojny = tylkoWojny
         return self.wojny
 
     def crawl(self):
         "Glówna funkcja, zwraca rezultat do przeglądarki"
-        return self.wyszukajZmiany()
+        self.wyszukajZmiany()
+        return self.odfiltrujPojedyncze()
 
