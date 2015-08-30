@@ -2,7 +2,6 @@
 import requests
 import re
 from bs4 import BeautifulSoup
-from bs4 import NavigableString
 
 def przetworzStrone(url):
     "Funckja przetwarzająca strone na obiekt klasy BeautfulSoup"
@@ -96,12 +95,19 @@ class AktyWandalizmu(object):
         for key in self.wojny:
             if len(self.wojny[key]) > 1:        #jeżeli wystąpiło + - (lub - +), czyli więcej niż pojedynczy niepowiązany wpis
                 tylkoWojny[key] = self.wojny[key]
-                #print tylkoWojny[key]
         self.wojny = tylkoWojny
+
+    def poszukajZmian(self):
+        "Wykonuje typowego diffa na podanych stronach"
+        for key in self.wojny:
+            for zmiana in self.wojny[key]:
+                zmiana.iloscZmian = len(self.wojny[key])        #uzupełnienie każdego obiektu o ilość zmian (będzie potrzebne do sortowania wg najbardziej zmienianego akapitu)
+                print zmiana.iloscZmian
 
     def crawl(self):
         "Glówna funkcja, zwraca rezultat do przeglądarki"
         self.wyszukajZmiany()
         self.odfiltrujPojedyncze()
+        self.poszukajZmian()
         return self.rezultat
 
