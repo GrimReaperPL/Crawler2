@@ -35,12 +35,13 @@ class AktyWandalizmu(object):
         next = 0;       #zmienna pilnująca aby wpisy były obok siebie
         id = -1          #id potrzebne do klasyfikowania wpisów odnoszących się do tej samej zmiany
         for odnosnik in historia:
-            for span in odnosnik.find_all('span', class_=re.compile("mw-plusminus-")):   #wyszukaj wszystkie wystapienia klas mw-plusminus-pos oraz mw-plusminus-neg czyli ilość zmian
-                if abs(int(span.string[1:-1])) > self.liczbaZmian:      #jeżeli liczba zmian jest większa niż zakładana              
+            for span in odnosnik.find_all(re.compile('span|strong'), class_=re.compile("mw-plusminus-")):   #wyszukaj wszystkie wystapienia klas mw-plusminus-pos oraz mw-plusminus-neg czyli ilość zmian
+                liczba = int(span.string[1:-1].replace(',', ''))         #zamiana przecinka na nic czyli z 23,444 zrobi 23444 (inaczej będą błędy)       
+                if abs(liczba) > self.liczbaZmian:      #jeżeli liczba zmian jest większa niż zakładana              
                     zmiana = Zmiany()
-                    zmiana.iloscZnakow = abs(int(span.string[1:-1]))
+                    zmiana.iloscZnakow = abs(liczba)
                     zmiana.odnosnik = odnosnik
-                    if int(span.string[1:-1]) > 0:
+                    if liczba > 0:          #jeśli dodatnia to znaczy że dodano jakiś tekst
                         zmiana.usuwany = False
                     else:
                         zmiana.usuwany = True
@@ -57,7 +58,8 @@ class AktyWandalizmu(object):
                     else:
                         pass        #coś nie pykło (powinien być tutaj jakiś exception)
                 else:
-                    next = 0
+                    if abs(liczba) != 0:        #zauważyłem że czasem pomiędzy dwoma zmianami jest jedna z numerem zmian równym 0, nie wiem dlaczego tak jest
+                        next = 0
                     #id += 1
         for item in self.wojny:
             print item
