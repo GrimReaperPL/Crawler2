@@ -18,6 +18,7 @@ class Zmiany(object):
         self.iloscZmian = 0           #ilosc nastepujących po sobie + i - (lub odwrotnie)
         self.usuwany = False          #czy akapit został usunięty i jest przywracany czy odwrotnie
         self.komentarz = ""           #komentarz do wykonanej zmiany (dodadny przez autora wpisu)
+        self.urlCur = ""              #link do cur
 
 class AktyWandalizmu(object):
     "Klasa główna crawlera"
@@ -29,9 +30,9 @@ class AktyWandalizmu(object):
         "Pobiera linki do wszystkich rewizji które mają więcej niż 200 zmian"
         historia = przetworzStrone(self.strona).find(id="pagehistory").find_all("li")    #w stronie historii wyciągnij wszystkie wpisy zmian
         for odnosnik in historia:
-            for span in odnosnik.find_all('span', class_="mw-plusminus-pos"):
-                print span
-                print int(span.string[1:-1])
+            for span in odnosnik.find_all('span', class_=re.compile("mw-plusminus-")):   #wyszukaj wszystkie wystapienia klas mw-plusminus-pos oraz mw-plusminus-neg
+                if abs(int(span.string[1:-1])) > self.liczbaZmian:      #jeżeli liczba zmian jest większa niż zakładana
+                    print span
 
         return historia
     def crawl(self):
