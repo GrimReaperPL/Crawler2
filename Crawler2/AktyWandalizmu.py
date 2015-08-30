@@ -7,6 +7,7 @@ def przetworzStrone(url):
     "Funckja przetwarzająca strone na obiekt klasy BeautfulSoup"
     req = requests.get(url)
     req.encoding = "utf-8"
+    return BeautifulSoup(req.text, 'html.parser')
 
 class Zmiany(object):
     "Przechowuje zmienione paragrafy wraz z informacją o ilości zmian"
@@ -26,7 +27,14 @@ class AktyWandalizmu(object):
         self.liczbaZmian = 200  #liczba zmian do wyszukania
     def wyszukajZmiany(self):
         "Pobiera linki do wszystkich rewizji które mają więcej niż 200 zmian"
-
+        historia = przetworzStrone(self.strona).find(id="pagehistory").find_all("li")    #w stronie historii wyciągnij wszystkie wpisy zmian
+        for odnosnik in historia:
+            for span in odnosnik.find_all('span', recursive=False):
+                print span.attrs['class']
+            #if odnosnik.span['class'] == "mw-plusminus-pos":
+            #    print odnosnik.span.string
+        return historia
     def crawl(self):
-        return "<h1>Crawler ended</h1>"
+        "Glówna funkcja, zwraca rezultat do przeglądarki"
+        return self.wyszukajZmiany()
 
