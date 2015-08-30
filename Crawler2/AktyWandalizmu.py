@@ -30,6 +30,7 @@ class AktyWandalizmu(object):
         self.rewizje = []       #kontener na linki do rewizji powyżej 200 zmian
         self.liczbaZmian = 200  #liczba zmian do wyszukania
         self.wojny = {}         #słownik zawierający pary id: powiązane zmiany
+        self.rezultat = ""      #wyniki do zwrócenia
     def wyszukajZmiany(self):
         "Pobiera linki do wszystkich rewizji które mają więcej niż 200 zmian"
         historia = przetworzStrone(self.strona).find(id="pagehistory").find_all("li")    #w stronie historii wyciągnij wszystkie wpisy zmian
@@ -48,19 +49,33 @@ class AktyWandalizmu(object):
                         zmiana.usuwany = True
                     komentarz = odnosnik.find('span', class_="comment")     #poszukaj komentarza
                     try:
-                        print("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore'))
+                        print("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore')) + "<br>"
+                        self.rezultat += str("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore')) + " </br> "
                         zmiana.komentarz = unicode(komentarz.text).encode('ascii', 'ignore')
                     except AttributeError:
                         pass        #nie było opisu przy zmianie (zdarza się to jednak dość rzadko
+                    cur = odnosnik.find('span', class_="mw-history-histlinks").find_all("a")
+                    #cur = cur.find_all('a')
+                    first = True
+                    for link in cur:
+                        if first:
+                            print("Cur: " + "https://en.wikipedia.org/" + str(link.get('href')))
+                            self.rezultat += str("Cur: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " </br> "
+                            first = False
+                        else:
+                            print("Prev: " + "https://en.wikipedia.org/" + str(link.get('href')))
+                            self.rezultat += str("Prev: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " </br> "
                     if id in self.wojny and next > 0:       #jeżeli zmiany są obok siebie oraz jest już wcześniej dodane to dopisuje do tego id w słowniku
                         self.wojny[id].append(zmiana)
-                        print("Weszlo" + str(span.string) + "z id: " + str(id))
+                        print("Dodano" + str(span.string) + "z id: " + str(id))
+                        self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " </br> "
                         next += 1                           #kontynuujemy numerowanie - jeżeli zmiany są następujące po sobie to ta zmienna rośnie
                     elif id not in self.wojny or next == 0:
                         id += 1                 #zwiększ id o 1, za pierwszym razem ustawia na 0 (w sumie to nie ma znaczenia - to nie C)
                         self.wojny[id] = []     #dodaje do słownika o kluczu id nową liste na której będą obiekty reprezentujące zmiany tych samych paragrafów
                         self.wojny[id].append(zmiana)
-                        print("Weszlo" + str(span.string) + "z id: " + str(id))
+                        print("Dodano" + str(span.string) + "z id: " + str(id))
+                        self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " </br> "
                         next += 1               #dodajemy aby było powyżej zera
                     else:
                         pass        #coś nie pykło (powinien być tutaj jakiś exception)
@@ -68,8 +83,8 @@ class AktyWandalizmu(object):
                     if liczba != 0:        #zauważyłem że czasem pomiędzy dwoma zmianami jest jedna z numerem zmian równym 0, nie wiem dlaczego tak jest
                         next = 0
                     #id += 1
-        for item in self.wojny:
-            print item
+        #for item in self.wojny:
+        #    print item
         #return self.wojny
 
     def odfiltrujPojedyncze(self):
@@ -80,10 +95,11 @@ class AktyWandalizmu(object):
                 tylkoWojny[key] = self.wojny[key]
                 print tylkoWojny[key]
         self.wojny = tylkoWojny
-        return self.wojny
+        #return self.wojny
 
     def crawl(self):
         "Glówna funkcja, zwraca rezultat do przeglądarki"
         self.wyszukajZmiany()
-        return self.odfiltrujPojedyncze()
+        self.odfiltrujPojedyncze()
+        return self.rezultat
 
