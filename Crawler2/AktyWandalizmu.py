@@ -29,10 +29,10 @@ class AktyWandalizmu(object):
         "Pobiera linki do wszystkich rewizji które mają więcej niż 200 zmian"
         historia = przetworzStrone(self.strona).find(id="pagehistory").find_all("li")    #w stronie historii wyciągnij wszystkie wpisy zmian
         for odnosnik in historia:
-            for span in odnosnik.find_all('span', recursive=False):
-                print span.attrs['class']
-            #if odnosnik.span['class'] == "mw-plusminus-pos":
-            #    print odnosnik.span.string
+            for span in odnosnik.find_all('span', class_="mw-plusminus-pos"):
+                print span
+                print int(span.string[1:-1])
+
         return historia
     def crawl(self):
         "Glówna funkcja, zwraca rezultat do przeglądarki"
