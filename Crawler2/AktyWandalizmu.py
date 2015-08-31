@@ -28,7 +28,7 @@ class Zmiany(object):
 class AktyWandalizmu(object):
     "Klasa główna crawlera"
     def __init__(self):
-        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=100&action=history"     #chwilowa zmiana na 100 (bo za wolno)
+        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=500&action=history"     #chwilowa zmiana na 100 (bo za wolno)
         self.rewizje = []       #kontener na linki do rewizji powyżej 200 zmian
         self.liczbaZmian = 200  #liczba zmian do wyszukania
         self.calyAkapit = 20000 #liczba powyżej której uznajemy że cały akapit został usunięty
@@ -51,6 +51,9 @@ class AktyWandalizmu(object):
                     zmiana.odnosnik = odnosnik
                     if liczba > 0:          #jeśli dodatnia to znaczy że dodano jakiś tekst
                         zmiana.usuwany = False
+                        if abs(liczba) > self.calyAkapit:   #prawdopodobnie usunięto cały akapit
+                            zmiana.usunietoCaly = True
+                            print("Przywrocono caly akapit");
                     else:
                         zmiana.usuwany = True
                         if abs(liczba) > self.calyAkapit:   #prawdopodobnie usunięto cały akapit
@@ -119,8 +122,11 @@ class AktyWandalizmu(object):
             if not znaleziono:      #jeśli nie znaleziono pogrubionego tekstu
                 usuniety = edycja.find_all('td', class_="diff-deletedline")
                 for wpis in usuniety:
-                    print unicode("Usuniety wpis: ") + unicode(wpis.div.text).encode('ascii', 'ignore')
-                    zmiana.paragrafPrzed += unicode(wpis.div.text).encode('ascii', 'ignore')
+                    try:
+                        print unicode("Usuniety wpis: ") + unicode(wpis.div.text).encode('ascii', 'ignore')
+                        zmiana.paragrafPrzed += unicode(wpis.div.text).encode('ascii', 'ignore')
+                    except AttributeError:
+                        pass        #usunięto pustą linie
         else:
             dodany = edycja.find_all('ins', class_="diffchange diffchange-inline")
             for wpis in dodany:
@@ -130,8 +136,11 @@ class AktyWandalizmu(object):
             if not znaleziono:
                 dodany = edycja.find_all('td', class_="diff-addedline")
                 for wpis in dodany:
-                    print unicode("Dodany wpis: ") + unicode(wpis.div.text).encode('ascii', 'ignore')
-                    zmiana.paragrafPo += unicode(wpis.div.text).encode('ascii', 'ignore')
+                    try:
+                        print unicode("Dodany wpis: ") + unicode(wpis.div.text).encode('ascii', 'ignore')
+                        zmiana.paragrafPo += unicode(wpis.div.text).encode('ascii', 'ignore')
+                    except AttributeError:
+                        pass        #dodano pustą linie
 
     def poszukajZmian(self):
         "Wykonuje typowego diffa na podanych stronach"
@@ -163,8 +172,10 @@ class AktyWandalizmu(object):
                    self.rezultat += "\nLiczba zmian: " + str(zmiana.iloscZmian) + "\n"
                    pierwszeWystapienie += 1
                 self.rezultat += "Komentarz: " + zmiana.komentarz + "\n"
-                if zmiana.usunietoCaly:
+                if zmiana.usunietoCaly and zmiana.usuwany:
                     self.rezultat += "Zlosliwie usunieto cala tresc\n"
+                elif zmiana.usunietoCaly and not zmiana.usuwany:
+                    self.rezultat += "Przywrocono usunieta tresc\n"
                 elif zmiana.usuwany:
                     self.rezultat += "Usunieto: " + zmiana.paragrafPrzed + " \n\n"
                 elif not zmiana.usuwany:
