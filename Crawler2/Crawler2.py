@@ -14,8 +14,8 @@ class crawl:
     def GET(self):
         akty = AktyWandalizmu.AktyWandalizmu()
         results = akty.crawl()
-        #return render.display(results)
-        return results     
+        return render.display(results)
+        #return results     
       
 if __name__ == "__main__": 
     app = web.application(urls, globals())

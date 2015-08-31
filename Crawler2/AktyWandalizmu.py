@@ -28,7 +28,7 @@ class Zmiany(object):
 class AktyWandalizmu(object):
     "Klasa główna crawlera"
     def __init__(self):
-        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=500&action=history"     #chwilowa zmiana na 100 (bo za wolno)
+        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=100&action=history"     #chwilowa zmiana na 100 (bo za wolno)
         self.rewizje = []       #kontener na linki do rewizji powyżej 200 zmian
         self.liczbaZmian = 200  #liczba zmian do wyszukania
         self.calyAkapit = 20000 #liczba powyżej której uznajemy że cały akapit został usunięty
@@ -166,20 +166,20 @@ class AktyWandalizmu(object):
         "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
         for key in self.najwyzej:
             pierwszeWystapienie = 0         #zmienna pilnuje żeby Liczba zmian wyświetliła się tylko raz
-            self.rezultat += "\n --------------- Zmiana ----------------- \n"
+            self.rezultat += "<h2> --------------- Zmiana ----------------- </h2> <br>"
             for zmiana in self.wojny[key]:
                 if pierwszeWystapienie == 0:
-                   self.rezultat += "\nLiczba zmian: " + str(zmiana.iloscZmian) + "\n"
+                   self.rezultat += "<br> <h3>Liczba zmian: " + str(zmiana.iloscZmian) + "</h3> <br>"
                    pierwszeWystapienie += 1
-                self.rezultat += "Komentarz: " + zmiana.komentarz + "\n"
+                self.rezultat += "Komentarz: " + zmiana.komentarz + "<br>"
                 if zmiana.usunietoCaly and zmiana.usuwany:
-                    self.rezultat += "Zlosliwie usunieto cala tresc\n"
+                    self.rezultat += "Zlosliwie usunieto cala tresc <br>"
                 elif zmiana.usunietoCaly and not zmiana.usuwany:
-                    self.rezultat += "Przywrocono usunieta tresc\n"
+                    self.rezultat += "Przywrocono usunieta tresc <br>"
                 elif zmiana.usuwany:
-                    self.rezultat += "Usunieto: " + zmiana.paragrafPrzed + " \n\n"
+                    self.rezultat += "Usunieto: " + zmiana.paragrafPrzed + "<br> <br>"
                 elif not zmiana.usuwany:
-                    self.rezultat += "Dodano: " + zmiana.paragrafPo + " \n\n"
+                    self.rezultat += "Dodano: " + zmiana.paragrafPo + " <br> <br>"
                 else:
                     pass        #coś zdecydowanie nie pykło
 
