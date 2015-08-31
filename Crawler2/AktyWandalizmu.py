@@ -6,6 +6,7 @@ import datetime as dt   #do pomiaru czasu (to działa tak wooooolno)
 
 def przetworzStrone(url):
     "Funckja przetwarzająca strone na obiekt klasy BeautfulSoup"
+    requests.packages.urllib3.disable_warnings()        #wyłącza informacje o obsłudze SSL
     req = requests.get(url)
     req.encoding = "utf-8"
     return BeautifulSoup(req.text, 'html.parser')
@@ -27,12 +28,13 @@ class Zmiany(object):
 class AktyWandalizmu(object):
     "Klasa główna crawlera"
     def __init__(self):
-        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=500&action=history"
+        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=100&action=history"     #chwilowa zmiana na 100 (bo za wolno)
         self.rewizje = []       #kontener na linki do rewizji powyżej 200 zmian
         self.liczbaZmian = 200  #liczba zmian do wyszukania
         self.calyAkapit = 20000 #liczba powyżej której uznajemy że cały akapit został usunięty
         self.wojny = {}         #słownik zawierający pary id: powiązane zmiany
         self.rezultat = ""      #wyniki do zwrócenia
+        self.najwyzej = []       #zawiera posortowane id od największej ilości zmian do najmniejszej
 
     def wyszukajZmiany(self):
         "Pobiera linki do wszystkich rewizji które mają więcej niż 200 zmian"
@@ -43,7 +45,7 @@ class AktyWandalizmu(object):
             for span in odnosnik.find_all(re.compile('span|strong'), class_=re.compile("mw-plusminus-")):   #wyszukaj wszystkie wystapienia klas mw-plusminus-pos oraz mw-plusminus-neg czyli ilość zmian
                 liczba = int(span.string[1:-1].replace(',', ''))         #zamiana przecinka na nic czyli z 23,444 zrobi 23444 (inaczej będą błędy)       
                 if abs(liczba) > self.liczbaZmian:      #jeżeli liczba zmian jest większa niż zakładana      
-                    self.rezultat += "\n"               #żeby to jakoś wyglądało w przeglądarce        
+                    #self.rezultat += "\n"               #żeby to jakoś wyglądało w przeglądarce        
                     zmiana = Zmiany()
                     zmiana.iloscZnakow = abs(liczba)
                     zmiana.odnosnik = odnosnik
@@ -54,11 +56,11 @@ class AktyWandalizmu(object):
                         if abs(liczba) > self.calyAkapit:   #prawdopodobnie usunięto cały akapit
                             zmiana.usunietoCaly = True
                             print("Usunieto caly akapit");
-                            self.rezultat += "Usunieto caly akapit \n "
+                            #self.rezultat += "Usunieto caly akapit \n "
                     komentarz = odnosnik.find('span', class_="comment")     #poszukaj komentarza
                     try:
                         print("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore'))
-                        self.rezultat += str("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore')) + " \n "
+                        #self.rezultat += str("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore')) + " \n "
                         zmiana.komentarz = unicode(komentarz.text).encode('ascii', 'ignore')
                     except AttributeError:
                         pass        #nie było opisu przy zmianie (zdarza się to jednak dość rzadko
@@ -67,24 +69,24 @@ class AktyWandalizmu(object):
                     for link in cur:
                         if first:
                             print("Cur: " + "https://en.wikipedia.org/" + str(link.get('href')))
-                            self.rezultat += str("Cur: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
+                            #self.rezultat += str("Cur: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
                             zmiana.urlCur = "https://en.wikipedia.org/" + str(link.get('href'))
                             first = False
                         else:
                             print("Prev: " + "https://en.wikipedia.org/" + str(link.get('href')))
-                            self.rezultat += str("Prev: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
+                            #self.rezultat += str("Prev: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
                             zmiana.urlPrev = "https://en.wikipedia.org/" + str(link.get('href'))
                     if id in self.wojny and next > 0:       #jeżeli zmiany są obok siebie oraz jest już wcześniej dodane to dopisuje do tego id w słowniku
                         self.wojny[id].append(zmiana)
                         print("Dodano" + str(span.string) + "z id: " + str(id))
-                        self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " \n "
+                        #self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " \n "
                         next += 1                           #kontynuujemy numerowanie - jeżeli zmiany są następujące po sobie to ta zmienna rośnie
                     elif id not in self.wojny or next == 0:
                         id += 1                 #zwiększ id o 1, za pierwszym razem ustawia na 0 (w sumie to nie ma znaczenia - to nie C)
                         self.wojny[id] = []     #dodaje do słownika o kluczu id nową liste na której będą obiekty reprezentujące zmiany tych samych paragrafów
                         self.wojny[id].append(zmiana)
                         print("Dodano" + str(span.string) + "z id: " + str(id))
-                        self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " \n "
+                        #self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " \n "
                         next += 1               #dodajemy aby było powyżej zera
                     else:
                         pass        #coś nie pykło (powinien być tutaj jakiś exception)
@@ -103,7 +105,9 @@ class AktyWandalizmu(object):
     def poszukajAkapitu(self, zmiana):
         "Funkcja znajdująca zmienione akapity i zwraca zmieniony tekst przed i po"
         if zmiana.usunietoCaly:
-            return ("Usunięty cały", "Usunięty cały")
+            zmiana.paragrafPo = "Usunieto caly"
+            zmiana.paragrafPrzed = "Usunieto caly"
+            return
         edycja = przetworzStrone(zmiana.urlPrev)                #przeglądamy tylko obecną wersje z poprzednią (czyli prev)
         if zmiana.usuwany:
             usuniety = edycja.find_all('del', class_="diffchange diffchange-inline")
@@ -124,14 +128,26 @@ class AktyWandalizmu(object):
                 print zmiana.iloscZmian
                 self.poszukajAkapitu(zmiana)
 
+    def sortuj(self):
+        "Sortuje od największej ilości zmian do najmniejszej"
+        for item in self.wojny:
+            max = 0
+            maxId = 0
+            for id in self.wojny:
+                if len(self.wojny[id]) > max and id not in self.najwyzej:
+                    max = len(self.wojny[id])
+                    maxId = id
+            self.najwyzej.append(maxId)
+        print self.najwyzej
+
     def formatujWyniki(self):
         "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
-        for key in self.wojny:
+        for key in self.najwyzej:
             for zmiana in self.wojny[key]:
-                self.rezultat += "Liczba zmian: " + str(zmiana.iloscZmian) + " \n"
+                self.rezultat += "Liczba zmian: " + str(zmiana.iloscZmian) + "\n \n"
                 self.rezultat += "Komentarz: " + zmiana.komentarz + "\n"
                 if zmiana.usunietoCaly:
-                    self.rezultat += "Złośliwie usunięto całą treść\n"
+                    self.rezultat += "Zlosliwie usunieto cala tresc\n"
                 elif zmiana.usuwany:
                     self.rezultat += zmiana.paragrafPrzed + "\n"
                 elif not zmiana.usuwany:
@@ -145,6 +161,7 @@ class AktyWandalizmu(object):
         self.wyszukajZmiany()
         self.odfiltrujPojedyncze()
         self.poszukajZmian()
+        self.sortuj()
         self.formatujWyniki()
         n2 = dt.datetime.now()
         print "Uplyneło: " + str((n2-n1).seconds) + " sekund\n"
