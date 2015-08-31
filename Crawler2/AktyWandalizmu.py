@@ -2,6 +2,7 @@
 import requests
 import re
 from bs4 import BeautifulSoup
+import datetime as dt   #do pomiaru czasu (to działa tak wooooolno)
 
 def przetworzStrone(url):
     "Funckja przetwarzająca strone na obiekt klasy BeautfulSoup"
@@ -67,10 +68,12 @@ class AktyWandalizmu(object):
                         if first:
                             print("Cur: " + "https://en.wikipedia.org/" + str(link.get('href')))
                             self.rezultat += str("Cur: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
+                            zmiana.urlCur = "https://en.wikipedia.org/" + str(link.get('href'))
                             first = False
                         else:
                             print("Prev: " + "https://en.wikipedia.org/" + str(link.get('href')))
                             self.rezultat += str("Prev: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
+                            zmiana.urlPrev = "https://en.wikipedia.org/" + str(link.get('href'))
                     if id in self.wojny and next > 0:       #jeżeli zmiany są obok siebie oraz jest już wcześniej dodane to dopisuje do tego id w słowniku
                         self.wojny[id].append(zmiana)
                         print("Dodano" + str(span.string) + "z id: " + str(id))
@@ -97,17 +100,53 @@ class AktyWandalizmu(object):
                 tylkoWojny[key] = self.wojny[key]
         self.wojny = tylkoWojny
 
+    def poszukajAkapitu(self, zmiana):
+        "Funkcja znajdująca zmienione akapity i zwraca zmieniony tekst przed i po"
+        if zmiana.usunietoCaly:
+            return ("Usunięty cały", "Usunięty cały")
+        edycja = przetworzStrone(zmiana.urlPrev)                #przeglądamy tylko obecną wersje z poprzednią (czyli prev)
+        if zmiana.usuwany:
+            usuniety = edycja.find_all('del', class_="diffchange diffchange-inline")
+            for wpis in usuniety:
+                print unicode("Usuniety wpis: ") + unicode(wpis.text).encode('ascii', 'ignore')
+                zmiana.paragrafPrzed += unicode(wpis.text).encode('ascii', 'ignore')
+        else:
+            dodany = edycja.find_all('ins', class_="diffchange diffchange-inline")
+            for wpis in dodany:
+                print unicode("Dodany wpis: ") + unicode(wpis.text).encode('ascii', 'ignore')
+                zmiana.paragrafPo += unicode(wpis.text).encode('ascii', 'ignore')
+
     def poszukajZmian(self):
         "Wykonuje typowego diffa na podanych stronach"
         for key in self.wojny:
             for zmiana in self.wojny[key]:
                 zmiana.iloscZmian = len(self.wojny[key])        #uzupełnienie każdego obiektu o ilość zmian (będzie potrzebne do sortowania wg najbardziej zmienianego akapitu)
                 print zmiana.iloscZmian
+                self.poszukajAkapitu(zmiana)
+
+    def formatujWyniki(self):
+        "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
+        for key in self.wojny:
+            for zmiana in self.wojny[key]:
+                self.rezultat += "Liczba zmian: " + str(zmiana.iloscZmian) + " \n"
+                self.rezultat += "Komentarz: " + zmiana.komentarz + "\n"
+                if zmiana.usunietoCaly:
+                    self.rezultat += "Złośliwie usunięto całą treść\n"
+                elif zmiana.usuwany:
+                    self.rezultat += zmiana.paragrafPrzed + "\n"
+                elif not zmiana.usuwany:
+                    self.rezultat += zmiana.paragrafPo + "\n"
+                else:
+                    pass        #coś zdecydowanie nie pykło
 
     def crawl(self):
         "Glówna funkcja, zwraca rezultat do przeglądarki"
+        n1 = dt.datetime.now()
         self.wyszukajZmiany()
         self.odfiltrujPojedyncze()
         self.poszukajZmian()
+        self.formatujWyniki()
+        n2 = dt.datetime.now()
+        print "Uplyneło: " + str((n2-n1).seconds) + " sekund\n"
         return self.rezultat
 
