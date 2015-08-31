@@ -1,3 +1,45 @@
-Jak działa crawler:
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>Crawler</title>
+	<link href='http://fonts.googleapis.com/css?family=Advent+Pro&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
+	<style>
+html, body {
+    height: 100%;
+	font-family: 'Advent Pro', sans-serif;
+	font-size:18px;
+	background-color: #F6FFF3;
+	padding-top: 25px;
+	padding-left: 50px;
+	padding-right: 50px;
+	padding-bottom: 2cm;
+}
 
-<a href="/results">start crawlera</a>
+button {
+	background: #80B2FF;
+	border-radius: 10px;
+	padding: 20px;
+	opacity:0.9;
+	font-size:18px;
+	border-style: solid;
+	border-width: 5px;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+a:hover, a:visited, a:link, a:active {
+    text-decoration: none;
+	color: #FFFFFF;
+}
+
+</style>
+</head>
+<body>
+<center>
+<div> <a href="/results">
+<button type="button" onclick="document.getElementById('message').innerHTML = 'Proszę czekać';">Start Crawler!</button>
+</div>
+<div id="message"> </div>
+</center>
+</body>
+</html>

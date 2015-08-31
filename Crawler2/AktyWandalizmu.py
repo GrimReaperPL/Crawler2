@@ -30,13 +30,12 @@ class Zmiany(object):
 class AktyWandalizmu(object):
     "Klasa główna crawlera"
     def __init__(self):
-        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=100&action=history"     #chwilowa zmiana na 100 (bo za wolno)
-        self.rewizje = []       #kontener na linki do rewizji powyżej 200 zmian
+        self.strona = "https://en.wikipedia.org/w/index.php?title=God&offset=&limit=500&action=history"
         self.liczbaZmian = 200  #liczba zmian do wyszukania
         self.calyAkapit = 20000 #liczba powyżej której uznajemy że cały akapit został usunięty
         self.wojny = {}         #słownik zawierający pary id: powiązane zmiany
         self.rezultat = ""      #wyniki do zwrócenia
-        self.najwyzej = []       #zawiera posortowane id od największej ilości zmian do najmniejszej
+        self.najwyzej = []      #zawiera posortowane id od największej ilości zmian do najmniejszej
 
     def wyszukajZmiany(self):
         "Pobiera linki do wszystkich rewizji które mają więcej niż 200 zmian"
@@ -105,7 +104,7 @@ class AktyWandalizmu(object):
         linkWikipedia = "https://en.wikipedia.org/wiki/"
         linkDoStronyObrazu = ""
         if zmiana.usuwany:
-            if "File:" in zmiana.paragrafPrzed:
+            if "File:" in zmiana.paragrafPrzed:             #każdy link do obrazu ma postać File:nazwa_pliku.jpg|costam
                 poczatek = zmiana.paragrafPrzed.find("File:")
                 koniec = zmiana.paragrafPrzed.find("|")
                 link = zmiana.paragrafPrzed[poczatek:koniec]
@@ -117,7 +116,7 @@ class AktyWandalizmu(object):
                 link = zmiana.paragrafPo[poczatek:koniec]
                 linkDoStronyObrazu = linkWikipedia + link
         if len(linkDoStronyObrazu) > 0:
-            stronaObrazu = przetworzStrone(linkDoStronyObrazu)
+            stronaObrazu = przetworzStrone(linkDoStronyObrazu)  #pobrany link odnosi do strony ze zdjęciem, a trzeba pobrać jeszcze samo zdjęcie
             original = stronaObrazu.find('div', class_="fullMedia")
             try:
                 zmiana.obrazLink = original.a.get('href')
@@ -149,12 +148,12 @@ class AktyWandalizmu(object):
                         pass        #usunięto pustą linie
             self.znajdzObrazek(zmiana)
         else:
-            dodany = edycja.find_all('ins', class_="diffchange diffchange-inline")
+            dodany = edycja.find_all('ins', class_="diffchange diffchange-inline")      #znajduje wszystkie pogrubione teksty
             for wpis in dodany:
                 print unicode("Dodany wpis: ") + unicode(wpis.text).encode('ascii', 'ignore')
                 zmiana.paragrafPo += unicode(wpis.text).encode('ascii', 'ignore')
                 znaleziono = True
-            if not znaleziono:
+            if not znaleziono:          #czasem zmieniony tekst nie jest pogrubiony, w takim przypadku poszukaj też niepogrubionego
                 dodany = edycja.find_all('td', class_="diff-addedline")
                 for wpis in dodany:
                     try:
@@ -162,14 +161,13 @@ class AktyWandalizmu(object):
                         zmiana.paragrafPo += unicode(wpis.div.text).encode('ascii', 'ignore')
                     except AttributeError:
                         pass        #dodano pustą linie
-            self.znajdzObrazek(zmiana)
+            self.znajdzObrazek(zmiana)      #szuka linku do obrazku, jeśli jest to dodaje obrazek
 
     def poszukajZmian(self):
         "Wykonuje typowego diffa na podanych stronach"
         for key in self.wojny:
             for zmiana in self.wojny[key]:
                 zmiana.iloscZmian = len(self.wojny[key])        #uzupełnienie każdego obiektu o ilość zmian (będzie potrzebne do sortowania wg najbardziej zmienianego akapitu)
-                print zmiana.iloscZmian
                 self.poszukajAkapitu(zmiana)
 
     def sortuj(self):
@@ -182,11 +180,10 @@ class AktyWandalizmu(object):
                     max = len(self.wojny[id])
                     maxId = id
             self.najwyzej.append(maxId)
-        print self.najwyzej
 
     def formatujWyniki(self):
         "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
-        self.rezultat += str("<h1>Wyniki dla hasla God</h1>")
+        self.rezultat += u"<h1>Wyniki dla hasła God</h1>"
         for key in self.najwyzej:
             pierwszeWystapienie = 0         #zmienna pilnuje żeby Liczba zmian wyświetliła się tylko raz
             self.rezultat += "<h2> Zmiana </h2>"
@@ -196,17 +193,19 @@ class AktyWandalizmu(object):
                    pierwszeWystapienie += 1
                 self.rezultat += "<p id=\"comment\">Komentarz: " + zmiana.komentarz + "</p>"
                 if zmiana.usunietoCaly and zmiana.usuwany:
-                    self.rezultat += "Zlosliwie usunieto cala tresc <br>"
+                    self.rezultat += u"<p id=\"deleted\">Złośliwie usunięto całą treść </p>"
                 elif zmiana.usunietoCaly and not zmiana.usuwany:
-                    self.rezultat += "Przywrocono usunieta tresc <br>"
+                    self.rezultat += u"<p id=\"added\">Przywrócono usunieta tresc </p>"
                 elif zmiana.usuwany:
-                    self.rezultat += "<p id=\"deleted\">Usunieto: <br> " + zmiana.paragrafPrzed + "</p>"
+                    self.rezultat += u"<p id=\"deleted\">Usunięto: <br> " + zmiana.paragrafPrzed #+ "</p>"
                     if zmiana.jestObraz:
-                        self.rezultat += "<img src=\"" + str(zmiana.obrazLink) + "\">"
+                        self.rezultat += "<a href=\"" + str(zmiana.obrazLink) + "\"><img src=\"" + str(zmiana.obrazLink) + "\"></a>"
+                    self.rezultat += "</p>"
                 elif not zmiana.usuwany:
-                    self.rezultat += "<p id=\"added\">Dodano: <br> " + zmiana.paragrafPo + "</p>"
+                    self.rezultat += "<p id=\"added\">Dodano: <br> " + zmiana.paragrafPo # + "</p>"
                     if zmiana.jestObraz:
-                        self.rezultat += "<img src=\"" + str(zmiana.obrazLink) + "\">"
+                        self.rezultat += "<a href=\"" + str(zmiana.obrazLink) + "\"><img src=\"" + str(zmiana.obrazLink) + "\"></a>"
+                    self.rezultat += "</p>"
                 else:
                     pass        #coś zdecydowanie nie pykło
 
@@ -218,7 +217,7 @@ class AktyWandalizmu(object):
         self.poszukajZmian()
         self.sortuj()
         self.formatujWyniki()
-        n2 = dt.datetime.now()
-        print "Uplyneło: " + str((n2-n1).seconds) + " sekund\n"
+        n2 = dt.datetime.now()      #pomiar czasu - u mnie 500 rewizji czas: 257sekund (długo)
+        print "Uplynelo: " + str((n2-n1).seconds) + " sekund\n"
         return self.rezultat
 
