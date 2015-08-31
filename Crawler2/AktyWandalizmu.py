@@ -109,16 +109,29 @@ class AktyWandalizmu(object):
             zmiana.paragrafPrzed = "Usunieto caly"
             return
         edycja = przetworzStrone(zmiana.urlPrev)                #przeglądamy tylko obecną wersje z poprzednią (czyli prev)
+        znaleziono = False                      #czasem zmiany nie są pogrubione (takie coś też należy wykryć)
         if zmiana.usuwany:
             usuniety = edycja.find_all('del', class_="diffchange diffchange-inline")
             for wpis in usuniety:
                 print unicode("Usuniety wpis: ") + unicode(wpis.text).encode('ascii', 'ignore')
                 zmiana.paragrafPrzed += unicode(wpis.text).encode('ascii', 'ignore')
+                znaleziono = True
+            if not znaleziono:      #jeśli nie znaleziono pogrubionego tekstu
+                usuniety = edycja.find_all('td', class_="diff-deletedline")
+                for wpis in usuniety:
+                    print unicode("Usuniety wpis: ") + unicode(wpis.div.text).encode('ascii', 'ignore')
+                    zmiana.paragrafPrzed += unicode(wpis.div.text).encode('ascii', 'ignore')
         else:
             dodany = edycja.find_all('ins', class_="diffchange diffchange-inline")
             for wpis in dodany:
                 print unicode("Dodany wpis: ") + unicode(wpis.text).encode('ascii', 'ignore')
                 zmiana.paragrafPo += unicode(wpis.text).encode('ascii', 'ignore')
+                znaleziono = True
+            if not znaleziono:
+                dodany = edycja.find_all('td', class_="diff-addedline")
+                for wpis in dodany:
+                    print unicode("Dodany wpis: ") + unicode(wpis.div.text).encode('ascii', 'ignore')
+                    zmiana.paragrafPo += unicode(wpis.div.text).encode('ascii', 'ignore')
 
     def poszukajZmian(self):
         "Wykonuje typowego diffa na podanych stronach"
@@ -143,15 +156,19 @@ class AktyWandalizmu(object):
     def formatujWyniki(self):
         "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
         for key in self.najwyzej:
+            pierwszeWystapienie = 0         #zmienna pilnuje żeby Liczba zmian wyświetliła się tylko raz
+            self.rezultat += "\n --------------- Zmiana ----------------- \n"
             for zmiana in self.wojny[key]:
-                self.rezultat += "Liczba zmian: " + str(zmiana.iloscZmian) + "\n \n"
+                if pierwszeWystapienie == 0:
+                   self.rezultat += "\nLiczba zmian: " + str(zmiana.iloscZmian) + "\n"
+                   pierwszeWystapienie += 1
                 self.rezultat += "Komentarz: " + zmiana.komentarz + "\n"
                 if zmiana.usunietoCaly:
                     self.rezultat += "Zlosliwie usunieto cala tresc\n"
                 elif zmiana.usuwany:
-                    self.rezultat += zmiana.paragrafPrzed + "\n"
+                    self.rezultat += "Usunieto: " + zmiana.paragrafPrzed + " \n\n"
                 elif not zmiana.usuwany:
-                    self.rezultat += zmiana.paragrafPo + "\n"
+                    self.rezultat += "Dodano: " + zmiana.paragrafPo + " \n\n"
                 else:
                     pass        #coś zdecydowanie nie pykło
 
