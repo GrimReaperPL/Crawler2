@@ -24,6 +24,8 @@ class Zmiany(object):
         self.urlCur = ""              #link do cur
         self.urlPrev = ""             #link do prev
         self.odnosnik = ""            #link do wpisu w historii
+        self.jestObraz = False        #czy posiada link do obrazu (problem - obsługuje najwyżej jeden na raz)
+        self.obrazLink = ""           #link do obrazu
 
 class AktyWandalizmu(object):
     "Klasa główna crawlera"
@@ -45,7 +47,6 @@ class AktyWandalizmu(object):
             for span in odnosnik.find_all(re.compile('span|strong'), class_=re.compile("mw-plusminus-")):   #wyszukaj wszystkie wystapienia klas mw-plusminus-pos oraz mw-plusminus-neg czyli ilość zmian
                 liczba = int(span.string[1:-1].replace(',', ''))         #zamiana przecinka na nic czyli z 23,444 zrobi 23444 (inaczej będą błędy)       
                 if abs(liczba) > self.liczbaZmian:      #jeżeli liczba zmian jest większa niż zakładana      
-                    #self.rezultat += "\n"               #żeby to jakoś wyglądało w przeglądarce        
                     zmiana = Zmiany()
                     zmiana.iloscZnakow = abs(liczba)
                     zmiana.odnosnik = odnosnik
@@ -59,11 +60,9 @@ class AktyWandalizmu(object):
                         if abs(liczba) > self.calyAkapit:   #prawdopodobnie usunięto cały akapit
                             zmiana.usunietoCaly = True
                             print("Usunieto caly akapit");
-                            #self.rezultat += "Usunieto caly akapit \n "
                     komentarz = odnosnik.find('span', class_="comment")     #poszukaj komentarza
                     try:
                         print("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore'))
-                        #self.rezultat += str("Komentarz: " + unicode(komentarz.text).encode('ascii', 'ignore')) + " \n "
                         zmiana.komentarz = unicode(komentarz.text).encode('ascii', 'ignore')
                     except AttributeError:
                         pass        #nie było opisu przy zmianie (zdarza się to jednak dość rzadko
@@ -72,24 +71,20 @@ class AktyWandalizmu(object):
                     for link in cur:
                         if first:
                             print("Cur: " + "https://en.wikipedia.org/" + str(link.get('href')))
-                            #self.rezultat += str("Cur: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
                             zmiana.urlCur = "https://en.wikipedia.org/" + str(link.get('href'))
                             first = False
                         else:
                             print("Prev: " + "https://en.wikipedia.org/" + str(link.get('href')))
-                            #self.rezultat += str("Prev: " + "https://en.wikipedia.org/" + str(link.get('href'))) + " \n "
                             zmiana.urlPrev = "https://en.wikipedia.org/" + str(link.get('href'))
                     if id in self.wojny and next > 0:       #jeżeli zmiany są obok siebie oraz jest już wcześniej dodane to dopisuje do tego id w słowniku
                         self.wojny[id].append(zmiana)
                         print("Dodano" + str(span.string) + "z id: " + str(id))
-                        #self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " \n "
                         next += 1                           #kontynuujemy numerowanie - jeżeli zmiany są następujące po sobie to ta zmienna rośnie
                     elif id not in self.wojny or next == 0:
                         id += 1                 #zwiększ id o 1, za pierwszym razem ustawia na 0 (w sumie to nie ma znaczenia - to nie C)
                         self.wojny[id] = []     #dodaje do słownika o kluczu id nową liste na której będą obiekty reprezentujące zmiany tych samych paragrafów
                         self.wojny[id].append(zmiana)
                         print("Dodano" + str(span.string) + "z id: " + str(id))
-                        #self.rezultat += str("Dodano" + str(span.string) + "z id: " + str(id)) + " \n "
                         next += 1               #dodajemy aby było powyżej zera
                     else:
                         pass        #coś nie pykło (powinien być tutaj jakiś exception)
@@ -104,6 +99,31 @@ class AktyWandalizmu(object):
             if len(self.wojny[key]) > 1:        #jeżeli wystąpiło + - (lub - +), czyli więcej niż pojedynczy niepowiązany wpis
                 tylkoWojny[key] = self.wojny[key]
         self.wojny = tylkoWojny
+
+    def znajdzObrazek(self, zmiana):
+        "Funkcja zwracająca link do obrazu znalezionego w zmianie"
+        linkWikipedia = "https://en.wikipedia.org/wiki/"
+        linkDoStronyObrazu = ""
+        if zmiana.usuwany:
+            if "File:" in zmiana.paragrafPrzed:
+                poczatek = zmiana.paragrafPrzed.find("File:")
+                koniec = zmiana.paragrafPrzed.find("|")
+                link = zmiana.paragrafPrzed[poczatek:koniec]
+                linkDoStronyObrazu = linkWikipedia + link
+        else:
+            if "File:" in zmiana.paragrafPo:
+                poczatek = zmiana.paragrafPo.find("File:")
+                koniec = zmiana.paragrafPo.find("|")
+                link = zmiana.paragrafPo[poczatek:koniec]
+                linkDoStronyObrazu = linkWikipedia + link
+        if len(linkDoStronyObrazu) > 0:
+            stronaObrazu = przetworzStrone(linkDoStronyObrazu)
+            original = stronaObrazu.find('div', class_="fullMedia")
+            try:
+                zmiana.obrazLink = original.a.get('href')
+                zmiana.jestObraz = True
+            except AttributeError:
+                pass            #nie udało się wyciągnąć linku do obrazu
 
     def poszukajAkapitu(self, zmiana):
         "Funkcja znajdująca zmienione akapity i zwraca zmieniony tekst przed i po"
@@ -127,6 +147,7 @@ class AktyWandalizmu(object):
                         zmiana.paragrafPrzed += unicode(wpis.div.text).encode('ascii', 'ignore')
                     except AttributeError:
                         pass        #usunięto pustą linie
+            self.znajdzObrazek(zmiana)
         else:
             dodany = edycja.find_all('ins', class_="diffchange diffchange-inline")
             for wpis in dodany:
@@ -141,6 +162,7 @@ class AktyWandalizmu(object):
                         zmiana.paragrafPo += unicode(wpis.div.text).encode('ascii', 'ignore')
                     except AttributeError:
                         pass        #dodano pustą linie
+            self.znajdzObrazek(zmiana)
 
     def poszukajZmian(self):
         "Wykonuje typowego diffa na podanych stronach"
@@ -166,7 +188,7 @@ class AktyWandalizmu(object):
         "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
         for key in self.najwyzej:
             pierwszeWystapienie = 0         #zmienna pilnuje żeby Liczba zmian wyświetliła się tylko raz
-            self.rezultat += "<h2> --------------- Zmiana ----------------- </h2> <br>"
+            self.rezultat += "<h2> --------------- Zmiana ----------------- </h2>"
             for zmiana in self.wojny[key]:
                 if pierwszeWystapienie == 0:
                    self.rezultat += "<br> <h3>Liczba zmian: " + str(zmiana.iloscZmian) + "</h3> <br>"
@@ -178,8 +200,12 @@ class AktyWandalizmu(object):
                     self.rezultat += "Przywrocono usunieta tresc <br>"
                 elif zmiana.usuwany:
                     self.rezultat += "Usunieto: " + zmiana.paragrafPrzed + "<br> <br>"
+                    if zmiana.jestObraz:
+                        self.rezultat += "<img src=\"" + zmiana.obrazLink + "\"> <br>"
                 elif not zmiana.usuwany:
                     self.rezultat += "Dodano: " + zmiana.paragrafPo + " <br> <br>"
+                    if zmiana.jestObraz:
+                        self.rezultat += "<img src=\"" + zmiana.obrazLink + "\"> <br>"
                 else:
                     pass        #coś zdecydowanie nie pykło
 
