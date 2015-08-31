@@ -186,26 +186,27 @@ class AktyWandalizmu(object):
 
     def formatujWyniki(self):
         "Funcja zwraca wyniki wyszukiwania w postaci 'czytelnej' dla użytkownika"
+        self.rezultat += str("<h1>Wyniki dla hasla God</h1>")
         for key in self.najwyzej:
             pierwszeWystapienie = 0         #zmienna pilnuje żeby Liczba zmian wyświetliła się tylko raz
-            self.rezultat += "<h2> --------------- Zmiana ----------------- </h2>"
+            self.rezultat += "<h2> Zmiana </h2>"
             for zmiana in self.wojny[key]:
                 if pierwszeWystapienie == 0:
-                   self.rezultat += "<br> <h3>Liczba zmian: " + str(zmiana.iloscZmian) + "</h3> <br>"
+                   self.rezultat += "<h3>Liczba zmian: " + str(zmiana.iloscZmian) + "</h3>"
                    pierwszeWystapienie += 1
-                self.rezultat += "Komentarz: " + zmiana.komentarz + "<br>"
+                self.rezultat += "<p id=\"comment\">Komentarz: " + zmiana.komentarz + "</p>"
                 if zmiana.usunietoCaly and zmiana.usuwany:
                     self.rezultat += "Zlosliwie usunieto cala tresc <br>"
                 elif zmiana.usunietoCaly and not zmiana.usuwany:
                     self.rezultat += "Przywrocono usunieta tresc <br>"
                 elif zmiana.usuwany:
-                    self.rezultat += "Usunieto: " + zmiana.paragrafPrzed + "<br> <br>"
+                    self.rezultat += "<p id=\"deleted\">Usunieto: <br> " + zmiana.paragrafPrzed + "</p>"
                     if zmiana.jestObraz:
-                        self.rezultat += "<img src=\"" + zmiana.obrazLink + "\"> <br>"
+                        self.rezultat += "<img src=\"" + str(zmiana.obrazLink) + "\">"
                 elif not zmiana.usuwany:
-                    self.rezultat += "Dodano: " + zmiana.paragrafPo + " <br> <br>"
+                    self.rezultat += "<p id=\"added\">Dodano: <br> " + zmiana.paragrafPo + "</p>"
                     if zmiana.jestObraz:
-                        self.rezultat += "<img src=\"" + zmiana.obrazLink + "\"> <br>"
+                        self.rezultat += "<img src=\"" + str(zmiana.obrazLink) + "\">"
                 else:
                     pass        #coś zdecydowanie nie pykło
 
